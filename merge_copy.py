@@ -286,6 +286,7 @@ def graph():
             src = src + 1
             dst = dst + 1
         for branch in branches_dict:
+            descriptor = branches_dict[branch]
             dot.node(chr(descriptor), branch)
             branch_parent = get_parent_id(branch)
             branch_parent_descriptor = commit_id_dict[branch_parent]
