@@ -257,36 +257,50 @@ def graph():
     if not wit_folder_path:
         print("The folder '.wit' does not exists in any of the parent folders and thus the function can not operate.")
     else:
-        commit_id_list = []
         rfr_path = os.path.join(wit_folder_path, 'references.txt')
         rfr = open(rfr_path, 'r')
         rfr_lines = rfr.readlines()
         head = rfr_lines[0].split('=')[1].strip()
         parent_path = head
-        while parent_path != 'None':
-            path_to_image_file = os.path.join(os.path.join(wit_folder_path, 'images'), parent_path + '.txt')
-            if os.path.exists(path_to_image_file):
-                commit_id_list.append(parent_path)
-                image_file = open(path_to_image_file, 'r')
-                r_image_file = image_file.readlines()
-                parent_path = r_image_file[0].split('=')[1].strip()
-            else:  # The parent file does not exist.
-                parent_path = 'None'
-        image_file.close()
-        print(commit_id_list)
-        dot = Digraph('Commit Id Tree', filename='graph_tree', format='png')
+        branches_dict = {}
+        commit_id_dict = {}
         descriptor = ord('A')
-        for commit_id in commit_id_list:
-            dot.node(chr(descriptor), commit_id)
+        b_descriptor = ord('a')
+        while parent_path != 'None' and parent_path is not None:
+            if ',' in parent_path:
+                right_parent_path = parent_path.split(',')[1]
+                branches_dict[right_parent_path] = b_descriptor
+                parent_path = parent_path.split(',')[0]
+                b_descriptor = b_descriptor + 1
+            commit_id_dict[parent_path] = descriptor
             descriptor = descriptor + 1
+            parent_path = get_parent_id(parent_path)
+        dot = Digraph('Commit Id Tree', filename='graph_tree', format='png')
+        for commit_id in commit_id_dict:
+            dot.node(chr(commit_id_dict[commit_id]), commit_id)
         src = ord('A')
         dst = ord('B')
         edges_list = []
-        for _ in range(len(commit_id_list) - 1):
+        for _ in range(len(commit_id_dict) - 1):
             edges_list.append(f'{chr(src)}{chr(dst)}')
             src = src + 1
             dst = dst + 1
-        print(edges_list)
+        for branch in branches_dict:
+            dot.node(chr(descriptor), branch)
+            branch_parent = get_parent_id(branch)
+            branch_parent_descriptor = commit_id_dict[branch_parent]
+            edges_list.append(f'{chr(descriptor)}{chr(branch_parent_descriptor)}')
+            descriptor = descriptor + 1
+            for commit in commit_id_dict:
+                f = open(index_path(commit) + '.txt', 'r')
+                f_data = f.readlines()
+                is_parent_merged = f_data[0].split('=')[1]
+                if ',' in is_parent_merged:
+                    p = is_parent_merged.split(',')[1].strip()
+                    if p == branch:
+                        commit_string = commit_id_dict[commit]
+                        branch_string = branches_dict[branch]
+                        edges_list.append(f'{chr(commit_string)}{chr(branch_string)}')
         dot.edges(edges_list)
         dot.view()
 
@@ -455,6 +469,8 @@ if len(sys.argv) == 2:
         print("Graph was called successfully.")
     elif sys.argv[1] == 'branch':
         print("You must enter the branch's name.")
+    elif sys.argv[1] == 'merge':
+        print("You must enter the branch's name.")
     else:
         print("The only arguments can be accepted are either 'init',add' or 'status'.")
 elif len(sys.argv) == 3:
@@ -474,6 +490,9 @@ elif len(sys.argv) == 3:
     elif sys.argv[1] == 'branch':
         branch(sys.argv[2])
         print("Branch was called successfully.")
+    elif sys.argv[1] == 'merge':
+        branch(sys.argv[2])
+        print("Merge was called successfully.")
     else:
         print("The only functions can be called with an argument are either 'add', 'commit' or 'checkout'.")
 else:
@@ -484,3 +503,4 @@ else:
     print("Exactly two argument can be entered if you are calling the 'commit' function.")
     print("Exactly two argument can be entered if you are calling the 'checkout' function.")
     print("Exactly two argument can be entered if you are calling the 'branch' function.")
+    print("Exactly two argument can be entered if you are calling the 'merge' function.")
